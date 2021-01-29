@@ -65,8 +65,34 @@ This relies on post permalinks being configured like so in `config.toml`, otherw
 The contents of `sites/website.yaml` (*Droz* configuration) is:
 
 ```yaml
-TODO
+publish_tags:              # Tags for copying multiple files.
+  - name: website_publish  # Copy files tagged #website_publish…
+    target: posts          # …to <Hugo dir>/content/posts/.
+    
+pages:                     # Mapping individual notes to pages.
+  - id: 202101261901       # Put note with the specified id (timestamp)…
+    target: about          # …to <Hugo dir>/content/about.md.
 ```
+
+## Usage
+
+Run `droz --to=~/source/website website` in the notes directory.
+
+* `--to=<absolute path>` is where the Hugo website is located.
+* `website` is the name of the file `sites/website.yaml` in the notes directory.
+
+## Requirements
+
+* *Droz* must be run in the notes directory.
+* The config named `website` must be located in `sites/website.yaml` in the note directory.
+
+* Note file names must follow the pattern `<timestamp> some text.md`…
+* …where `<timestamp>` is `YYYYMMDDHHmm`.
+* Files for a note must be stored in `files/<timestamp>/*.*`.
+* The first line of the note must be a first-level heading `# Heading`. It becomes the title and slug and is stripped from the file.
+* The note’s tags must be on one line starting with `Tags:` separated by spaces (the line will be stripped).
+
+These requirements may be relaxed as the tool gets developed.
 
 ## Post-initial version
 
