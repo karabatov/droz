@@ -99,3 +99,4 @@ These requirements may be relaxed as the tool gets developed.
 * Page mapping (timestamp to URL, `"202101261901" -> /about/`)
 * Tag mapping for readability (`internal_tag -> "External Tag"`).
 * Tag descriptions (single tag page would have text describing the tag).
+* Last modified date from the latest Git modification date.
