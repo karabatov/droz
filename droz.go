@@ -18,12 +18,24 @@ func main() {
 	var (
 		notesDir   = flag.String("notes", pwd, "Notes `directory`.")
 		hugoDir    = flag.String("to", "", "Hugo website root `directory`.")
-		siteConfig = flag.String("config", "", "Config `name` for website export.")
+		configName = flag.String("config", "", "Config `name` for website export.")
 	)
 
 	flag.Parse()
 
+	if *notesDir == "" {
+		flag.Set(*notesDir, pwd)
+	}
+
+	if *hugoDir == "" || *configName == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	configFileName := filepath.Join(*notesDir, "sites", *configName+".yaml")
+
 	fmt.Println(*notesDir)
 	fmt.Println(*hugoDir)
-	fmt.Println(*siteConfig)
+	fmt.Println(*configName)
+	fmt.Println(configFileName)
 }
