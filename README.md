@@ -76,10 +76,11 @@ pages:                     # Mapping individual notes to pages.
 
 ## Usage
 
-Run `droz --to=~/source/website website` in the notes directory.
+Run `droz -to=~/source/website -config=website` in the notes directory.
 
-* `--to=<absolute path>` is where the Hugo website is located.
+* `-to=<absolute path>` is where the Hugo website is located.
 * `website` is the name of the file `sites/website.yaml` in the notes directory.
+* Notes directory can be specified with the parameter `-notes`.
 
 ## Requirements
 
