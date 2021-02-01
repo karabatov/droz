@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"unicode"
 )
 
 type PublishTag struct {
@@ -27,7 +29,7 @@ type Config struct {
 }
 
 func (config *Config) TagTargets(siteDir string) map[string]string {
-	var t map[string]string
+	t := map[string]string{}
 
 	for _, tag := range config.PublishTags {
 		t[tag.Name] = filepath.Join(siteDir, "content", tag.Target)
@@ -54,6 +56,8 @@ var (
 	tagLine = regexp.MustCompile(`^Tags: `)
 	// Matches one tag without the pound sign.
 	oneTag = regexp.MustCompile(`#(\S+)\s*`)
+	// Matches title line.
+	titleLine = regexp.MustCompile(`^#\s(.*)$`)
 )
 
 func processPublishTags(config *Config, notesDir string, siteDir string) {
@@ -63,7 +67,7 @@ func processPublishTags(config *Config, notesDir string, siteDir string) {
 		os.Exit(1)
 	}
 
-	//tagTargets := config.TagTargets(siteDir)
+	tagTargets := config.TagTargets(siteDir)
 
 	for _, noteFile := range notes {
 		if noteFile.IsDir() || !goodNoteName.MatchString(noteFile.Name()) {
@@ -75,14 +79,19 @@ func processPublishTags(config *Config, notesDir string, siteDir string) {
 			fmt.Println("Error reading file, skipping", noteFile.Name())
 			continue
 		}
-		fmt.Println(tags)
+
+		for _, tag := range tags {
+			if targetDir, ok := tagTargets[tag]; ok {
+				transferNote(noteFile.Name(), notesDir, targetDir)
+			}
+		}
 	}
 }
 
 func tagsFromFile(notePath string) ([]string, error) {
 	tags := []string{}
 
-	f, err := os.Open(notePath)
+	f, err := os.OpenFile(notePath, os.O_RDONLY, 0644)
 	if err != nil {
 		return tags, err
 	}
@@ -107,6 +116,102 @@ func tagsFromFile(notePath string) ([]string, error) {
 	}
 
 	return tags, nil
+}
+
+func transferNote(noteFileName string, notesDir string, targetDir string) {
+	fmt.Println("Exporting note", noteFileName, "to", targetDir)
+
+	noteId := goodNoteName.FindStringSubmatch(noteFileName)[1]
+	targetFileName := filepath.Join(targetDir, noteId+".md")
+	fmt.Println(targetFileName)
+
+	// Let's make an assumption (for now) that title and tags come before other lines.
+	title := ""
+	date := fmt.Sprintf("%s-%s-%s", noteId[:4], noteId[4:6], noteId[6:8])
+
+	// Open source file for reading.
+	fromFile, err := os.OpenFile(filepath.Join(notesDir, noteFileName), os.O_RDONLY, 0644)
+	if err != nil {
+		fmt.Println("Couldn't open note:", err)
+		return
+	}
+
+	defer func() {
+		if err = fromFile.Close(); err != nil {
+			fmt.Println("Failed to close note:", err)
+		}
+	}()
+
+	// Open target file for writing.
+	targetFile, err := os.OpenFile(targetFileName, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("Couldn't open target:", err)
+		return
+	}
+
+	defer func() {
+		if err = targetFile.Close(); err != nil {
+			fmt.Println("Failed to close target:", err)
+		}
+	}()
+
+	// Whether we have written front matter.
+	frontMatter := false
+	// Skip empty lines after title and tags.
+	emptySkipped := false
+
+	w := bufio.NewWriter(targetFile)
+	s := bufio.NewScanner(fromFile)
+	for s.Scan() {
+		if !frontMatter {
+			if titleLine.MatchString(s.Text()) {
+				title = titleLine.FindStringSubmatch(s.Text())[1]
+				w.WriteString("---\n")
+				w.WriteString("title: " + title + "\n")
+				w.WriteString("date: " + date + "\n")
+				w.WriteString("slug: " + slugFromTitle(title) + "\n")
+				w.WriteString("---\n")
+				frontMatter = true
+			}
+			// Skip lines until we find the first level 1 heading.
+			continue
+		}
+		if !emptySkipped {
+			if s.Text() == "" {
+				continue
+			}
+			emptySkipped = true
+		}
+		if tagLine.MatchString(s.Text()) {
+			continue
+		}
+		w.WriteString(s.Text() + "\n")
+	}
+	w.Flush()
+}
+
+func slugFromTitle(title string) string {
+	// Partly lifted from https://github.com/mrvdot/golang-utils/blob/master/utils.go.
+	// To be improved.
+
+	seenColon := false
+	return strings.Map(func(r rune) rune {
+		if seenColon {
+			return -1
+		}
+		switch {
+		case r == ' ', r == '-':
+			return '-'
+		case r == '_', unicode.IsLetter(r), unicode.IsDigit(r):
+			return r
+		case r == ':':
+			seenColon = true
+			return -1
+		default:
+			return -1
+		}
+		return -1
+	}, strings.ToLower(strings.TrimSpace(title)))
 }
 
 func main() {
@@ -152,10 +257,4 @@ func main() {
 	}
 
 	// TODO: Process pages.
-
-	fmt.Println(*notesDir)
-	fmt.Println(*hugoDir)
-	fmt.Println(*configName)
-	fmt.Println(configFileName)
-	fmt.Println(config)
 }
