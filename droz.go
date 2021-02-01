@@ -1,10 +1,10 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	_ "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -26,7 +26,13 @@ type Config struct {
 
 func loadConfig(from string) (Config, error) {
 	c := Config{}
-	return c, errors.New("not implemented")
+
+	file, err := ioutil.ReadFile(from)
+	if err != nil {
+		return c, err
+	}
+	err = yaml.Unmarshal(file, &c)
+	return c, err
 }
 
 func main() {
@@ -55,7 +61,7 @@ func main() {
 	}
 
 	configFileName := filepath.Join(*notesDir, "sites", *configName+".yaml")
-	_, err := loadConfig(configFileName)
+	config, err := loadConfig(configFileName)
 	if err != nil {
 		fmt.Println("Could not load config file:", err)
 		os.Exit(1)
@@ -65,4 +71,5 @@ func main() {
 	fmt.Println(*hugoDir)
 	fmt.Println(*configName)
 	fmt.Println(configFileName)
+	fmt.Println(config)
 }
