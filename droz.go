@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"gopkg.in/yaml.v2"
@@ -46,6 +47,15 @@ func loadConfig(from string) (Config, error) {
 	return c, err
 }
 
+var (
+	// Matches "202102012138 note title.md" and "202102012138.md".
+	goodNoteName = regexp.MustCompile(`^(\d{12}).*\.md$`)
+	// Matches the line with tags.
+	tagLine = regexp.MustCompile(`^Tags: `)
+	// Matches one tag without the pound sign.
+	oneTag = regexp.MustCompile(`#(\S+)\s*`)
+)
+
 func processPublishTags(config *Config, notesDir string, siteDir string) {
 	notes, err := ioutil.ReadDir(notesDir)
 	if err != nil {
@@ -54,9 +64,6 @@ func processPublishTags(config *Config, notesDir string, siteDir string) {
 	}
 
 	//tagTargets := config.TagTargets(siteDir)
-
-	// Will match "202102012138 note title.md" and "202102012138.md".
-	var goodNoteName = regexp.MustCompile(`^\d{12}.*\.md$`)
 
 	for _, noteFile := range notes {
 		if noteFile.IsDir() || !goodNoteName.MatchString(noteFile.Name()) {
@@ -74,6 +81,30 @@ func processPublishTags(config *Config, notesDir string, siteDir string) {
 
 func tagsFromFile(notePath string) ([]string, error) {
 	tags := []string{}
+
+	f, err := os.Open(notePath)
+	if err != nil {
+		return tags, err
+	}
+
+	defer func() {
+		if err = f.Close(); err != nil {
+			fmt.Println("Failed to close file:", notePath)
+		}
+	}()
+
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		if !tagLine.MatchString(s.Text()) {
+			continue
+		}
+
+		for _, tagPair := range oneTag.FindAllStringSubmatch(s.Text(), -1) {
+			tags = append(tags, tagPair[1])
+		}
+
+		break
+	}
 
 	return tags, nil
 }
