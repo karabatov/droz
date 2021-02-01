@@ -65,7 +65,7 @@ func processPublishTags(config *Config, notesDir string, siteDir string) {
 		notePath := filepath.Join(notesDir, noteFile.Name())
 		tags, err := tagsFromFile(notePath)
 		if err != nil {
-			fmt.Println("Error reading file", noteFile.Name())
+			fmt.Println("Error reading file, skipping", noteFile.Name())
 			continue
 		}
 		fmt.Println(tags)
