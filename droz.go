@@ -24,6 +24,16 @@ type Config struct {
 	Pages       []Page
 }
 
+func (config *Config) TagTargets(siteDir string) map[string]string {
+	var t map[string]string
+
+	for _, tag := range config.PublishTags {
+		t[tag.Name] = filepath.Join(siteDir, "content", tag.Target)
+	}
+
+	return t
+}
+
 func loadConfig(from string) (Config, error) {
 	c := Config{}
 
@@ -60,12 +70,31 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Load config.
+
 	configFileName := filepath.Join(*notesDir, "sites", *configName+".yaml")
 	config, err := loadConfig(configFileName)
 	if err != nil {
 		fmt.Println("Could not load config file:", err)
 		os.Exit(1)
 	}
+
+	// TODO: Prepare tag mapping.
+
+	// Process publish tags.
+
+	if len(config.PublishTags) > 0 {
+		notes, err := ioutil.ReadDir(*notesDir)
+		if err != nil {
+			fmt.Println("Could not read notes directory:", err)
+			os.Exit(1)
+		}
+		for _, noteFile := range notes {
+			fmt.Println(noteFile.Name())
+		}
+	}
+
+	// TODO: Process pages.
 
 	fmt.Println(*notesDir)
 	fmt.Println(*hugoDir)
