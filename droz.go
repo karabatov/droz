@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 )
 
 type PublishTag struct {
@@ -43,6 +44,38 @@ func loadConfig(from string) (Config, error) {
 	}
 	err = yaml.Unmarshal(file, &c)
 	return c, err
+}
+
+func processPublishTags(config *Config, notesDir string, siteDir string) {
+	notes, err := ioutil.ReadDir(notesDir)
+	if err != nil {
+		fmt.Println("Could not read notes directory:", err)
+		os.Exit(1)
+	}
+
+	//tagTargets := config.TagTargets(siteDir)
+
+	// Will match "202102012138 note title.md" and "202102012138.md".
+	var goodNoteName = regexp.MustCompile(`^\d{12}.*\.md$`)
+
+	for _, noteFile := range notes {
+		if noteFile.IsDir() || !goodNoteName.MatchString(noteFile.Name()) {
+			continue
+		}
+		notePath := filepath.Join(notesDir, noteFile.Name())
+		tags, err := tagsFromFile(notePath)
+		if err != nil {
+			fmt.Println("Error reading file", noteFile.Name())
+			continue
+		}
+		fmt.Println(tags)
+	}
+}
+
+func tagsFromFile(notePath string) ([]string, error) {
+	tags := []string{}
+
+	return tags, nil
 }
 
 func main() {
@@ -84,14 +117,7 @@ func main() {
 	// Process publish tags.
 
 	if len(config.PublishTags) > 0 {
-		notes, err := ioutil.ReadDir(*notesDir)
-		if err != nil {
-			fmt.Println("Could not read notes directory:", err)
-			os.Exit(1)
-		}
-		for _, noteFile := range notes {
-			fmt.Println(noteFile.Name())
-		}
+		processPublishTags(&config, *notesDir, *hugoDir)
 	}
 
 	// TODO: Process pages.
