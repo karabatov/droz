@@ -71,7 +71,7 @@ publish_tags:              # Tags for copying multiple files.
     
 pages:                     # Mapping individual notes to pages.
   - id: 202101261901       # Put note with the specified id (timestamp)…
-    target: about          # …to <Hugo dir>/content/about.md.
+    target: about.md       # …to <Hugo dir>/content/about.md.
 ```
 
 ## Usage

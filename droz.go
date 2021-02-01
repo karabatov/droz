@@ -1,11 +1,33 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	_ "gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 )
+
+type PublishTag struct {
+	Name   string
+	Target string
+}
+
+type Page struct {
+	Id     string
+	Target string
+}
+
+type Config struct {
+	PublishTags []PublishTag `yaml:"publish_tags"`
+	Pages       []Page
+}
+
+func loadConfig(from string) (Config, error) {
+	c := Config{}
+	return c, errors.New("not implemented")
+}
 
 func main() {
 	flag.Usage = func() {
@@ -33,6 +55,11 @@ func main() {
 	}
 
 	configFileName := filepath.Join(*notesDir, "sites", *configName+".yaml")
+	_, err := loadConfig(configFileName)
+	if err != nil {
+		fmt.Println("Could not load config file:", err)
+		os.Exit(1)
+	}
 
 	fmt.Println(*notesDir)
 	fmt.Println(*hugoDir)
