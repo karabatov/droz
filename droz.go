@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"gopkg.in/yaml.v2"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -123,10 +124,10 @@ func transferNote(noteFileName string, notesDir string, targetDir string) {
 
 	noteId := goodNoteName.FindStringSubmatch(noteFileName)[1]
 	targetFileName := filepath.Join(targetDir, noteId+".md")
-	fmt.Println(targetFileName)
 
 	// Let's make an assumption (for now) that title and tags come before other lines.
 	title := ""
+	slug := ""
 	date := fmt.Sprintf("%s-%s-%s", noteId[:4], noteId[4:6], noteId[6:8])
 
 	// Open source file for reading.
@@ -166,10 +167,12 @@ func transferNote(noteFileName string, notesDir string, targetDir string) {
 		if !frontMatter {
 			if titleLine.MatchString(s.Text()) {
 				title = titleLine.FindStringSubmatch(s.Text())[1]
+				slug = slugFromTitle(title)
+				// TODO: Marshal YAML instead.
 				w.WriteString("---\n")
-				w.WriteString("title: " + title + "\n")
+				w.WriteString("title: \"" + title + "\"\n")
 				w.WriteString("date: " + date + "\n")
-				w.WriteString("slug: " + slugFromTitle(title) + "\n")
+				w.WriteString("slug: \"" + slug + "\"\n")
 				w.WriteString("---\n")
 				frontMatter = true
 			}
@@ -188,6 +191,49 @@ func transferNote(noteFileName string, notesDir string, targetDir string) {
 		w.WriteString(s.Text() + "\n")
 	}
 	w.Flush()
+	copyNoteFiles(noteId, slug, notesDir, targetDir)
+}
+
+func copyNoteFiles(noteId string, slug string, notesDir string, targetDir string) {
+	sourceNoteFiles := filepath.Join(notesDir, "files", noteId)
+	files, err := ioutil.ReadDir(sourceNoteFiles)
+	if err != nil {
+		// Not copying any files.
+		return
+	}
+
+	// Make sure target directory exists.
+	targetNoteFiles := filepath.Join(targetDir, slug, "files", noteId)
+	if os.MkdirAll(targetNoteFiles, 0644) != nil {
+		return
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			// Don't copy directories for now.
+			continue
+		}
+		_, err := copyFile(filepath.Join(sourceNoteFiles, file.Name()), filepath.Join(targetNoteFiles, file.Name()))
+		if err != nil {
+			fmt.Println("Failed to copy file:", err)
+		}
+	}
+}
+
+func copyFile(from string, to string) (int64, error) {
+	source, err := os.Open(from)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(to)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
 }
 
 func slugFromTitle(title string) string {
