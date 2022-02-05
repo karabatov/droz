@@ -248,6 +248,8 @@ func slugFromTitle(title string) string {
 		switch {
 		case r == ' ', r == '-':
 			return '-'
+                case r == '+':
+			return 'p'
 		case r == '_', unicode.IsLetter(r), unicode.IsDigit(r):
 			return r
 		case r == ':':
